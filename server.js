@@ -6,7 +6,6 @@ const morgan = require('morgan');
 const winston = require('winston');
 const NodeCache = require('node-cache');
 const dotenv = require('dotenv');
-const path = require('path');
 const bcrypt = require('bcrypt');
 const User = require('./models/User');
 const authRoutes = require('./routes/auth');
@@ -51,23 +50,26 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", "http://localhost:3000"]
+      connectSrc: ["'self'", "http://localhost:3000", "https://zhotheone.github.io"]
     }
   }
 })); // Security headers with CSP configured for local resources
 
-// Налаштування CORS для дозволу запитів з React-додатка
+// CORS configuration for production
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://zhotheone.github.io']
+    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined')); // HTTP request logging
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+// Remove static file serving middleware
+// app.use(express.static(path.join(__dirname, 'public')));
 
 // Cache middleware
 const cacheMiddleware = (duration) => (req, res, next) => {
@@ -113,10 +115,10 @@ app.use(isAuthenticated);
 // Authentication routes
 app.use('/api/auth', authRoutes);
 
-// Serve login page
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
+// Remove static file serving for login page
+// app.get('/login', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'public', 'login.html'));
+// });
 
 // Import routes
 const appointmentRoutes = require('./routes/appointments');
@@ -131,13 +133,13 @@ app.use('/api/procedures', procedureRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/schedules', require('./routes/schedules'));
 
-// Serve index.html for all non-API routes (SPA support)
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api/')) {
-    return next();
-  }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// Remove SPA support that serves static files
+// app.get('*', (req, res, next) => {
+//   if (req.path.startsWith('/api/')) {
+//     return next();
+//   }
+//   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
